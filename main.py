@@ -22,56 +22,16 @@ def get_bq_client():
         client.close()
 
 
-# ---------------------------------------------------------------------------
-# Properties
-# ---------------------------------------------------------------------------
-
-@app.get("/properties")
-def get_properties(bq: bigquery.Client = Depends(get_bq_client)):
-    """
-    Returns all properties in the database.
-    """
-    query = f"""
-        SELECT
-            property_id,
-            name,
-            address,
-            city,
-            state,
-            postal_code,
-            property_type,
-            tenant_name,
-            monthly_rent
-        FROM `{PROJECT_ID}.{DATASET}.properties`
-        ORDER BY property_id
-    """
-
-    try:
-        results = bq.query(query).result()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database query failed: {str(e)}"
-        )
-
-    properties = [dict(row) for row in results]
-    return properties
-
-
-
 # ── Configuration ──────────────────────────────────────────────────────────────
 # Replace these two values with your actual GCP project ID and dataset name
-# before running the app.
-PROJECT_ID = "project-fdc64e01-d38d-4013-b83"
-DATASET_ID = "property_mgmt"
+# before running the app.{project-fdc64e01-d38d-4013-b83} = "project-fdc64e01-d38d-4013-b83"
 
-TABLE = f"{PROJECT_ID}.{DATASET_ID}.suggestions"
+
+TABLE = f"{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties"
 
 # ── BigQuery client ────────────────────────────────────────────────────────────
-client = bigquery.Client(project=PROJECT_ID)
+client = bigquery.Client(project=project-fdc64e01-d38d-4013-b83)
 
-# ── FastAPI app ────────────────────────────────────────────────────────────────
-app = FastAPI()
 
 # CORS middleware tells the browser which cross-origin requests are allowed.
 # Allowing all origins ("*") is fine for a classroom demo but should be
@@ -108,6 +68,38 @@ class ExpenseCreate(BaseModel):
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 properties = []
+
+@app.get("/properties")
+def get_properties(bq: bigquery.Client = Depends(get_bq_client)):
+    """
+    Returns all properties in the database.
+    """
+    query = f"""
+        SELECT
+            property_id,
+            name,
+            address,
+            city,
+            state,
+            postal_code,
+            property_type,
+            tenant_name,
+            monthly_rent
+        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties`
+        ORDER BY property_id
+    """
+
+    try:
+        results = bq.query(query).result()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database query failed: {str(e)}"
+        )
+
+    properties = [dict(row) for row in results]
+    return properties
+
 @app.post("/properties")
 def add_property(property: PropertyCreate, bq: bigquery.Client = Depends(get_bq_client)):
     properties.append(property.dict())  # just save to list for now
@@ -118,7 +110,7 @@ def get_propety(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     """Return a single property, or 404 if not found."""
     query = f"""
         SELECT *
-        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties
+        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties`
         WHERE property_id = {property_id}
         LIMIT 1
     """
@@ -133,7 +125,7 @@ def return_income(property_id: int, bq: bigquery.Client = Depends(get_bq_client)
     """Return an existing Income record."""
     query = f"""
         SELECT *
-        FROM `{project-fdc64e01-d38d-4013-b83}.{project_mgmt}.income`
+        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.income`
         WHERE property_id = {property_id}
     """
     results = bq.query(query).result()
@@ -155,7 +147,7 @@ def add_income(property_id: int, body: IncomeCreate, bq: bigquery.Client = Depen
     """
     bq.query(query).result()
 
-    return {"message": "Income added successfully"}\
+    return {"message": "Income added successfully"}
 
 @app.get("/expenses/{property_id}", status_code=201)
 def get_expenses(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
