@@ -27,10 +27,10 @@ def get_bq_client():
 # before running the app.{project-fdc64e01-d38d-4013-b83} = "project-fdc64e01-d38d-4013-b83"
 
 
-TABLE = f"{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties"
+TABLE = f"{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.properties"
 
 # ── BigQuery client ────────────────────────────────────────────────────────────
-client = bigquery.Client(project=project-fdc64e01-d38d-4013-b83)
+client = bigquery.Client(project="project-fdc64e01-d38d-4013-b83")
 
 
 # CORS middleware tells the browser which cross-origin requests are allowed.
@@ -69,6 +69,11 @@ class ExpenseCreate(BaseModel):
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 properties = []
 
+@app.post("/properties")
+def add_property(property: PropertyCreate, bq: bigquery.Client = Depends(get_bq_client)):
+    properties.append(property.dict())  # just save to list for now
+    return {"message": "Property added!", "property": property}
+
 @app.get("/properties")
 def get_properties(bq: bigquery.Client = Depends(get_bq_client)):
     """
@@ -85,7 +90,7 @@ def get_properties(bq: bigquery.Client = Depends(get_bq_client)):
             property_type,
             tenant_name,
             monthly_rent
-        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties`
+        FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.properties`
         ORDER BY property_id
     """
 
@@ -100,17 +105,12 @@ def get_properties(bq: bigquery.Client = Depends(get_bq_client)):
     properties = [dict(row) for row in results]
     return properties
 
-@app.post("/properties")
-def add_property(property: PropertyCreate, bq: bigquery.Client = Depends(get_bq_client)):
-    properties.append(property.dict())  # just save to list for now
-    return {"message": "Property added!", "property": property}
-
 @app.get("/properties/{property_id}")
 def get_propety(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     """Return a single property, or 404 if not found."""
     query = f"""
         SELECT *
-        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.properties`
+        FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.properties`
         WHERE property_id = {property_id}
         LIMIT 1
     """
@@ -118,14 +118,12 @@ def get_propety(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     if not rows:
         raise HTTPException(status_code=404, detail="Property not found")
     return dict(rows[0])
-
-
 @app.get("/income/{property_id}", status_code=201)
 def return_income(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     """Return an existing Income record."""
     query = f"""
         SELECT *
-        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.income`
+        FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.income`
         WHERE property_id = {property_id}
     """
     results = bq.query(query).result()
@@ -136,7 +134,7 @@ def return_income(property_id: int, bq: bigquery.Client = Depends(get_bq_client)
 @app.post("/income/{property_id}")
 def add_income(property_id: int, body: IncomeCreate, bq: bigquery.Client = Depends(get_bq_client)):
     query = f"""
-        INSERT INTO `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.income`
+        INSERT INTO `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.income`
         (property_id, amount, description, created_at)
         VALUES (
             {property_id},
@@ -154,7 +152,7 @@ def get_expenses(property_id: int, bq: bigquery.Client = Depends(get_bq_client))
     """Return an existing Expense record."""
     query = f"""
         SELECT *
-        FROM `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.expenses`
+        FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.expenses`
         WHERE property_id = {property_id}   
         """
     results = bq.query(query).result()
@@ -163,7 +161,7 @@ def get_expenses(property_id: int, bq: bigquery.Client = Depends(get_bq_client))
 @app.post("/expenses/{property_id}")
 def add_expense(property_id: int, body: ExpenseCreate, bq: bigquery.Client = Depends(get_bq_client)):   
     query= f"""
-        INSERT INTO `{project-fdc64e01-d38d-4013-b83}.{property_mgmt}.expenses`
+        INSERT INTO `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.expenses`
         (property_id, amount, description, created_at)
         VALUES (
             {property_id}, {body.amount}, '{body.description}', CURRENT_TIMESTAMP()
@@ -175,7 +173,7 @@ def add_expense(property_id: int, body: ExpenseCreate, bq: bigquery.Client = Dep
 @app.delete("/expenses/{property_id}")
 def delete_expense(property_id: int, expense_id: int, bq: bigquery.Client = Depends(get_bq_client)):   
     query = f"""
-        DELETE FROM `{project-fdc64e01-d38d-4013-b}.property_mgmt.expenses`
+        DELETE FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.expenses`
         WHERE property_id = {property_id} AND expense_id = {expense_id}
     """
     bq.query(query).result()
@@ -184,22 +182,22 @@ def delete_expense(property_id: int, expense_id: int, bq: bigquery.Client = Depe
 @app.delete("/income/{property_id}")
 def delete_income(property_id: int, income_id: int, bq: bigquery.Client = Depends(get_bq_client)):  
     query = f"""
-        DELETE FROM `{project-fdc64e01-d38d-4013-b}.property_mgmt.income`
+        DELETE FROM `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.income`
         WHERE property_id = {property_id} AND income_id = {income_id}
     """
     bq.query(query).result()
     return {"message": "Income deleted successfully"}  
 
 
-@app.get("profit/{property_id}")
+@app.get("/profit/{property_id}")
 def get_profit(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     query = f"""
         SELECT
             SUM(income.amount) - SUM(expenses.amount) AS profit
         FROM
-            `{project-fdc64e01-d38d-4013-b}.property_mgmt.income` AS income
+            `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.income` AS income
         JOIN
-            `{project-fdc64e01-d38d-4013-b}.property_mgmt.expenses` AS expenses
+            `{"project-fdc64e01-d38d-4013-b83"}.{"property_mgmt"}.expenses` AS expenses
         ON
             income.property_id = expenses.property_id
         WHERE
@@ -219,9 +217,9 @@ def property_summary(property_id: int, bq: bigquery.Client = Depends(get_bq_clie
         e.total_expenses,
         COALESCE(i.total_income, 0) - COALESCE(e.total_expenses, 0) AS profit
     FROM 
-        `project-fdc64e01-d38d-4013-b.property_mgmt.properties` AS p
-    LEFT JOIN `project-fdc64e01-d38d-4013-b.property_mgmt.income` i USING(property_id)
-    LEFT JOIN `project-fdc64e01-d38d-4013-b.property_mgmt.expenses` e USING(property_id)
+        `project-fdc64e01-d38d-4013-b83.property_mgmt.properties` AS p
+    LEFT JOIN `project-fdc64e01-d38d-4013-b83.property_mgmt.income` i USING(property_id)
+    LEFT JOIN `project-fdc64e01-d38d-4013-b83.property_mgmt.expenses` e USING(property_id)
     WHERE 
         p.property_id = @property_id
     """
