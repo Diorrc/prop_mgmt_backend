@@ -43,6 +43,17 @@ app.add_middleware(
     allow_headers=["*"],       # accept any request headers
 )
 
+#Error Message 
+
+app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail
+        }
+    )
+
 
 # ── Pydantic model ─────────────────────────────────────────────────────────────
 # Pydantic validates incoming JSON automatically. If a request body is missing
@@ -118,7 +129,7 @@ def get_propety(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     if not rows:
         raise HTTPException(status_code=404, detail="Property not found")
     return dict(rows[0])
-@app.get("/income/{property_id}", status_code=201)
+@app.get("/income/{property_id}", status_code=200)
 def return_income(property_id: int, bq: bigquery.Client = Depends(get_bq_client)):
     """Return an existing Income record."""
     query = f"""
@@ -129,7 +140,6 @@ def return_income(property_id: int, bq: bigquery.Client = Depends(get_bq_client)
     results = bq.query(query).result()
     return [dict(row) for row in results]
 
-    client.query(insert_query).result()
 
 @app.post("/income/{property_id}")
 def add_income(property_id: int, body: IncomeCreate, bq: bigquery.Client = Depends(get_bq_client)):
